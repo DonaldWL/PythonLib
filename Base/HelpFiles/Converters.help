@@ -1,0 +1,141 @@
+This module is made up of functions that help you convert data from
+one form to another.
+
+  ConvertMillisecondsDays - Function
+    Used to convert milliseconds to:
+
+      days, hours, minutes, seconds, milliseconds
+
+    <result> = ConvertMillisecondsDays(<milliseconds>)
+
+      <results>  => namedtuple
+        (days, hours, minutes, seconds, milliseconds)
+          days => int
+            Number of days.
+          hours => int
+            Number of hours
+          minutes => int
+            Number of minutes
+          seconds => int
+            Number of seconds
+          milliseconds => (int, float)
+            Number of milliseconds.  If your milliseconds is a
+            float then this will be a float.  This would occur
+            if you are tracking something that can run in less
+            than a millisecond.  If you wish to round it to the
+            millisecond then cast it to an int
+      
+  EXAMPLE:
+  
+    from Libs.Base.Converters import ConvertMillisecondsDays
+    
+    x = (((1000 * 60) * 60) * 24) * 14
+    x += 6000
+    x += (1000 * 60) * 5
+    x += ((1000 * 60) * 60) * 8
+    result = ConvertMillisecondsDays(x + 566)
+    
+      # Using Index (normal tuple access)
+    print("tuple access:")
+    print("  Days:         " + str(result[0]))
+    print("  Hours:        " + str(result[1]))
+    print("  Minutes:      " + str(result[2]))
+    print("  Seconds:      " + str(result[3]))
+    print("  Milliseconds: " + str(result[4]))
+    
+      # Using name (namedtuple access)
+    print("\nnamedtuple access:")
+    print("  Days:         " + str(result.days))
+    print("  Hours:        " + str(result.hours))
+    print("  Minutes:      " + str(result.minutes))
+    print("  Seconds:      " + str(result.seconds))
+    print("  Milliseconds: " + str(result.milliseconds))
+    
+  EXAMPLE OUTPUT:
+  
+    tuple access:
+      Days:         14
+      Hours:        8
+      Minutes:      5
+      Seconds:      6
+      Milliseconds: 566
+    
+    namedtuple access:
+      Days:         14
+      Hours:        8
+      Minutes:      5
+      Seconds:      6
+      Milliseconds: 566  
+        
+  ConvertMillisecondsWeeks - Function
+    Used to convert milliseconds to:
+
+      weeks, days, hours, minutes, seconds, milliseconds
+
+    <result> = ConvertMillisecondsDays(<milliseconds>)
+
+      <results>  => namedtuple
+        (weeks, days, hours, minutes, seconds, milliseconds)
+          weeks => int
+            Number of weeks.
+          days => int
+            Number of days.
+          hours => int
+            Number of hours
+          minutes => int
+            Number of minutes
+          seconds => int
+            Number of seconds
+          milliseconds => (int, float)
+            Number of milliseconds.  If your milliseconds is a
+            float then this will be a float.  This would occur
+            if you are tracking something that can run in less
+            than a millisecond.  If you wish to round it to the
+            millisecond then cast it to an int
+      
+  EXAMPLE:
+
+    from Libs.Base.Converters import ConvertMillisecondsWeeks
+
+    x = (((1000 * 60) * 60) * 24) * 14
+    x += 6000
+    x += (1000 * 60) * 5
+    x += ((1000 * 60) * 60) * 8
+    result = ConvertMillisecondsWeeks(x + 566)
+
+      # Using Index (normal tuple access)
+    print("tuple access:")
+    print("  Weeks:        " + str(result[0]))
+    print("  Days:         " + str(result[1]))
+    print("  Hours:        " + str(result[2]))
+    print("  Minutes:      " + str(result[3]))
+    print("  Seconds:      " + str(result[4]))
+    print("  Milliseconds: " + str(result[5]))
+
+      # Using name (namedtuple access)
+    print("\nnamedtuple access:")
+    print("  Weeks:        " + str(result.weeks))
+    print("  Days:         " + str(result.days))
+    print("  Hours:        " + str(result.hours))
+    print("  Minutes:      " + str(result.minutes))
+    print("  Seconds:      " + str(result.seconds))
+    print("  Milliseconds: " + str(result.milliseconds))
+
+  EXAMPLE OUTPUT:
+  
+    tuple access:
+      Weeks:        2
+      Days:         0
+      Hours:        8
+      Minutes:      5
+      Seconds:      6
+      Milliseconds: 566
+    
+    namedtuple access:
+      Weeks:        2
+      Days:         0
+      Hours:        8
+      Minutes:      5
+      Seconds:      6
+      Milliseconds: 566
+        

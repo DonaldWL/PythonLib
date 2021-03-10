@@ -1,0 +1,206 @@
+Help System
+
+  This file gives you a good understanding of how to create your help
+  files.  For how to use the library see 'Libs.Help.Help' and read the
+  doc strings.
+  
+  GENERAL
+  
+    The help system uses a set of files that contain help text that you
+    create.  You have one master file that must be called '_TopicTran.help'.
+    This file contains the topics that you wish to handle in the help
+    system.  It also defines the other files that will be used to gain
+    help from all the topics you have created.  
+    
+      <topics>   :== <topic> [{=>|->} <topics>] [{=>|->} f:<filename>]
+      <topic>    :== [t:]<topicname>
+      
+    A topic is just a simple string with no spaces.  a t:<topicname> 
+    is a special topic that is used to generate a topic list.  Every
+    topic that is proceeded by 't:' will be added to a topic list.  The
+    topic list will be sorted for you.
+    
+    'f:<filename>' must be at the in of the topic list in the line.  It
+    is used to override the default generation of the topics help file
+    name.
+    
+    By default the name of the topic help files is the last <topic> in 
+    the list on the line with '.help' added to its end.
+  
+  EXAMPLE FILE
+  
+    Below is simple example of a '_TopicTran.help' file.
+    
+      -e => --echosmsfile => t:echosmsfile
+      -h => --help        => t:help
+      -o => --overwrite   => t:overwrite
+      -s => --smsfile     => t:smsfile
+      -t => --tplfile     => t:tplfile
+      -m => --stmfile     => t:stmfile
+      -v => --version     => t:version
+      c  => w             => t:warranty     => t:copyright    
+      u  => t:usagedetail
+      t:todo
+      t:usage
+      t:SMSSystem => f:_smsfilelayout.help
+      
+    Each line defines topics and the relationships.  The first line
+    
+      -e => --echosmsfile => t:echosmsfile
+    
+    creates three topics '-e', '--echosmsfile' and 'echosmsfile'.  All
+    three topics will go to the 'echosmsfile.help' file.  The last entry
+    in the line will be used to generate the name of the help file for
+    all the topics on that line.  The 't:echosmsfile' takes this topic
+    and adds it to the topic list.  They others are not.  See the second
+    on how topic lists are used.
+    
+    The following line is using the 'f:' to sert the filename for the 
+    given topics.
+    
+      t:SMSSystem => f:_smsfilelayout.help
+      
+    The topic 'SMSSystem' will be assigned the file '_smsfilelayout.help'.
+    You can have as many topics defined for the 'f:', but the 'f:' must
+    be the last item on the line.
+    
+    The example does not show that you can have each line separate if you 
+    wish, but to do this almost every line would have to have a 'f:' on it.
+    Below is an example of taking the 'copywright' line and breaking it up
+    into more than one line.
+    
+        Original
+      c  => w             => t:warranty     => t:copyright
+      
+        New    
+      t:copyright
+      c           => f:copyright.help
+      w           => f:copyright.help
+      t:warranty  => f:copyright.help
+  
+    The above as broken the original line into separate lines.  The first line
+    't:copyright' could have also had a 'f:' for it.  But as you can see its
+    a little easer to read with all of them on the same line.
+  
+  TOPIC LISTS
+
+    To create a topic list for your help system just add 't:' in front of every 
+    topics that you wish to have in the topic list.  If you have created a topic
+    list then the help system scans every help file that it processes looking for
+    the location to dump the topic list.
+    
+    To have the topic list added to your output of a help file you must add a line
+    with the following (must be on its own line).
+    
+      @@@HelpTopics[,<maxlen>]@@@@
+      
+    The offset in the line is used to start writing out the topic list.  So if 
+    you wish to indent your list then place this at the indent that you wish.  Also
+    remember that the TopicIndent argument effects this also.  If TopicIndent is
+    2 and you place this 2 in then the list will have and offset of 4.  
+    
+    The <maxlen> is the maximum length of a line to be used to figure out how many
+    topics from the topic list that can be placed on a line.  The default is 70.
+    
+    Below is an example of a help file that uses this feature.  Assume the column
+    that this is written in starts at 1, it has been indented to work with this
+    help text.
+    
+      help
+        Gives you help on topics.  This command will exit the program
+        with a exit code of 2
+      
+        --help (-h) [<topic> [<topic>]...]
+        
+          <topic> is a command or a general topic.  To get all the
+          commands use '--help [usagedetail|u]'.    Below is a list of
+          the general topics:  
+          
+            @@@HelpTopics,65@@@@     
+    
+    Below is the output of what this could look like based on the '_TOpicTran.help'
+    file.  Again this has been indented for the help text file.
+    
+      usage: StateMachineGenerator {-m -s -t [-e] [-o]|{[-v]|[-h ...]}}
+      
+        help
+          Gives you help on topics.  This command will exit the program
+          with a exit code of 2
+        
+          --help (-h) [<topic> [<topic>]...]
+          
+            <topic> is a command or a general topic.  To get all the
+            commands use '--help [usagedetail|u]'.    Below is a list of
+            the general topics:  
+            
+              copyright   echosmsfile help        overwrite   smsfile     
+              SMSSystem   stmfile     todo        tplfile     usage       
+              usagedetail version     warranty    
+    
+    As you can see the last three lines have a nice output of all the topics
+    that have been added to the topic list.  It will always sort them for
+    you and not assume upper and lower case.  That is why 'SMSSystem' is
+    after 'smsfile'.
+
+  USING WITH PYTHON 'argparse'
+  
+    One issue you have with pythons argparser is that it already handles
+    the '-h' and '-help' for you.  If you wish to use this system you
+    have to disable this and create an action for your help commands.
+    When you create your argparser you need to add the following argument
+    to 'argparse.ArgumentParser'
+    
+      parser = argparse.ArgumentParser(add_help = False)
+      
+    The following is an example on how to create your help command.  It
+    defines an custom action called 'helpAction'.  If you have never 
+    created custom action for the python 'argparse' then you should
+    review the python documentation for this package.
+  
+      parser.add_argument('-h', '--help',
+                          action = helpAction,
+                          nargs = argparse.REMAINDER,
+                          default = None)
+    
+    Below is an example of the custom 'argparse' action 'helpAction'.
+    
+      import argparse
+      import sys
+      
+      import Libs.Help
+    
+      def __call__(self, parser, namespace, values, option_string = None):
+        HelpSys = Libs.Help.CHelp(HelpDirs = ['.\\helpfiles', '.'],
+                                  TopicSeperatorLine = '\n',
+                                  PreTopic = 'usage',
+                                  PostTopic = None,
+                                  TopicIndent = 2,
+                                  CopyRight = None,
+                                  OutFile = None)
+    
+        try:
+          if not values:  # No params default to detailed usage.
+            HelpSys.Process(['usagedetail'])
+          else:
+            HelpSys.Process(values)
+        except Libs.Help.HelpException as err:
+          print('Error on processing topics for help ({0})'.format(str(err)))
+          sys.exit(3)
+    
+        sys.exit(2) # Exit with a 2 just like the normal 'argparse' help command.
+
+  RECOMMENDATIONS
+  
+    I always create a file called todo and create a topic called todo.  Thus, for 
+    the application anyone can see what I may have planed.  
+    
+    I also create a copyright.help file that contains the copyright notice.  I then
+    create an entry like:
+    
+      c  => w             => t:warranty     => t:copyright
+      
+    The reason I place it at the root of the application is anyone can see it and read
+    it with any editor or use the application to dump it.  Remember you will have to
+    your root to the HelpDirs for the help system to find it.  If you do not wish
+    the name to end with '.help' then use the 'f:<filename>' and call it whatever you
+    wish, just remember it is just read in and echoed, thus a text file is required.

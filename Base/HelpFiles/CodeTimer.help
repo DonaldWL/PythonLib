@@ -1,0 +1,333 @@
+This module is used to capture how long it takes for a set of
+lines in python to execute.  It is made up of two class.
+
+  CCodeTimer
+    This class is the main class.  It can be used by itself 
+    to accomplish all modes you require.  
+    
+    You have the following variables available to you:
+      Name
+        Name of the CodeTimer
+      Start
+        Timer start
+      End
+        Timer End
+      Took
+        How long it took in milliseconds
+        
+    Methods available:
+      EndTimer
+        End the timer, normally not used.
+      Save
+        Saves the data.  Default prints it out on delete of
+        instance.
+    
+    You have three default modes to use this class in.  
+    
+      python 'with'
+        Create the instance with the python 'with' statement.
+        Put all your code within the 'with' statement.  When
+        the 'with' statement ends a single line will be printed
+        out on how many milliseconds it took.
+        
+      instance with 'EndTimer'
+        Create an instance.  Execute all your code and then
+        call the method 'EndTimer'.  Nothing will be written
+        out.  If you wish to write out how long it took then
+        convert the instance to a string and print this out.
+        The line will be the same as the python 'with'.  If
+        you use this method when the instance is deleted it
+        will not do anything, it will just be deleted.  It
+        assumes you have already done what you need to do.
+        
+      instance with del
+        Create an instance.  Execute all your code and then
+        del the instance.  When the instance is deleted it
+        will output a line just like python 'with'.
+        
+    You can control what happens to your data by creating
+    your own class that inherits from CCodeTimer.  You 
+    override the method 'Save'.  This will be called when
+    the instance is deleted, by a del or when the 'with'
+    statement ends.  It is not called when you use the 
+    'EndTimer' method.  You will have to call it yourself,
+    after you call 'EndTimer'.
+    
+    Unless you call the method 'Save' yourself more than
+    once it will only be called on the del once, and if
+    your have already called it then when the instance is
+    deleted it will not be called.
+    
+    You can use this method 'Save' to save your results
+    to a log file or a database or whatever you wish to 
+    do with the data.
+    
+    SIMPLE EXAMPLE:
+        
+      from Libs.Base.CodeTimer import CCodeTimer
+      
+        # Simple Usage.  When the 'with' statement ends will print
+        # out a simple line on how many milliseconds it took.
+      with CCodeTimer(Name = 'Timer1', CaptureTimer = None) as xx:
+        z = 0
+        for i in range(10000):
+          z += i
+      
+        # Simple Usage.  When 'EndTimer' is called will collect
+        # all the data.  To print it out you have to convert
+        # the instance of 'CCodeTimer' to a string and print it.   
+      CodeTimer = CCodeTimer(Name = 'Timer2', CaptureTimer = None)
+      z = 0
+      for i in range(10000):
+        z += i
+      CodeTimer.EndTimer()  # Does print the time it took
+      print(str(CodeTimer)) # Manual print the time it took
+      
+        # Simple Usage.  When you delete your instance it will
+        # print out a simple line on how many milliseconds it took.
+      CodeTimer = CCodeTimer(Name = 'Timer3', CaptureTimer = None)
+      z = 0
+      for i in range(10000):
+        z += i
+      del CodeTimer   # Prints the time it took
+      
+    OUTPUT FROM EXAMPLE:  
+
+      Code Block: Timer1 Took: 0.6639000000000019ms
+      Code Block: Timer2 Took: 0.6617999999999971ms
+      Code Block: Timer3 Took: 0.6625000000000034ms    
+
+    CUSTOM EXAMPLE:
+    
+      import sys
+      
+      from Libs.Base.CodeTimer import CCodeTimer
+      
+        # Added a file to log to.
+      class CMyCodeTimer(CCodeTimer):
+        def __init__(self, LogFile, Name = None, CaptureTimer = None):
+          CCodeTimer.__init__(self, Name, CaptureTimer)
+          
+          self._LogFile = LogFile
+          
+          # Have this format a nice line and write to the log file.
+        def Save(self):
+          Format = 'Name: {0}, Start: {1}ms, End: {2}ms, Took: {3}ms\n'
+          Line = Format.format(self.Name, 
+                               self.Start, 
+                               self.End, 
+                               self.Took)
+          self._LogFile.write(Line)
+          
+        # Simple Usage.  When the 'with' statement ends will print
+        # out a simple line on how many milliseconds it took.
+      with CMyCodeTimer(LogFile = sys.stdout, Name = 'Timer1', CaptureTimer = None) as xx:
+        z = 0
+        for i in range(10000):
+          z += i
+      
+        # Simple Usage.  When 'EndTimer' is called will collect
+        # all the data.  To print it out you have to convert
+        # the instance of 'CCodeTimer' to a string and print it.   
+      CodeTimer = CMyCodeTimer(LogFile = sys.stdout, Name = 'Timer2', CaptureTimer = None)
+      z = 0
+      for i in range(10000):
+        z += i
+      CodeTimer.EndTimer()
+      CodeTimer.Save()
+      
+        # Simple Usage.  When you delete your instance it will
+        # print out a simple line on how many milliseconds it took.
+      CodeTimer = CMyCodeTimer(LogFile = sys.stdout, Name = 'Timer3', CaptureTimer = None)
+      z = 0
+      for i in range(10000):
+        z += i
+      del CodeTimer
+
+    OUTPUT FROM EXAMPLE:  
+    
+      Name: Timer1, Start: 0.042204ms, End: 0.0428688ms, Took: 0.6648000000000001ms
+      Name: Timer2, Start: 0.042908ms, End: 0.0443163ms, Took: 1.4083000000000012ms
+      Name: Timer3, Start: 0.0443486ms, End: 0.0450937ms, Took: 0.7450999999999985ms
+
+    The final method for you to capture and control how this functions is to use the 
+    class 'CCaptureTimer'.  The instance of this class is passed into 'CCodeTimer'.
+    This will take over all processing.  'Save' will not be called by 'CCodeTimer'.
+    It will load the data into 'CCaptureTimer' and call the 'Save' method of 
+    'CCaptureTimer'.  The advantage of this is you create an instance of this class
+    outside of 'CCodeTimer' and thus when 'CCodeTimer' is deleted the 'CCaptureTimer'
+    instance still exists and you can manage the data any way you wish.  For details
+    on 'CCaptureTimer' see the below documentation.
+    
+    
+  CCaptureTimer
+    This class can be passed into 'CCodeTimer' to manage the data set that it creates.
+    Even after 'CCodeTimer' has been deleted your instance of 'CCaptureTimer' will still
+    exist.  This changes the behavior of 'CCodeTimer'.  The data set from 'CCodeTimer'
+    is loading into 'CCaptureTimer' and then the method 'Save' from 'CCaptureTimer' is
+    called.  The default save prints out the data set using 'ConvertMillisecondsDays'.
+    See the help file for Converters.
+    
+    You can use this class just like 'CCodeTimer'.  You can make your own customer
+    class and override the 'Save' method just like 'CCodeTimer'.  Another thing you
+    can do is save a list of these instances and then later process them.
+    
+    You have the following variables available to you:
+      Name
+        Name of the CodeTimer
+      Start
+        Timer start
+      End
+        Timer End
+      Took
+        How long it took in milliseconds
+        
+    Methods available:
+      Save
+        Saves the data.  Default it does nothing.  If you wish to access the data
+        you can or convert to a string.
+
+    SIMPLE EXAMPLE:
+      
+      import sys
+      
+      from Libs.Base.CodeTimer import (CCodeTimer, CCaptureTimer)
+      
+      CaptureTimer = CCaptureTimer()
+      
+        # Use a CCaptureTimer to manage the data
+      with CCodeTimer(Name = 'Timer1', CaptureTimer = CaptureTimer) as xx:
+        z = 0
+        for i in range(10000):
+          z += i
+      print(str(CaptureTimer))
+      
+        # Use a CCaptureTimer to manage the data
+      CodeTimer = CCodeTimer(Name = 'Timer2', CaptureTimer = CaptureTimer)
+      z = 0
+      for i in range(10000):
+        z += i
+      CodeTimer.EndTimer()
+      print(str(CaptureTimer))
+      
+        # Use a CCaptureTimer to manage the data
+      CodeTimer = CCodeTimer(Name = 'Timer3', CaptureTimer = CaptureTimer)
+      z = 0
+      for i in range(10000):
+        z += i
+      del CodeTimer
+      print(str(CaptureTimer))
+
+    OUTPUT FROM EXAMPLE:  
+
+      Code Block "Timer1" took: 0d 0h 0m 0s 0.6903000000000048ms
+      Code Block "Timer2" took: 0d 0h 0m 0s 0.9021999999999988ms
+      Code Block "Timer3" took: 0d 0h 0m 0s 0.6926000000000015ms
+
+    CUSTOM EXAMPLE:
+         
+      import time
+      from collections import namedtuple
+      from datetime import datetime
+      
+      from Libs.Base.CodeTimer import (CCodeTimer, CCaptureTimer)
+      
+      class CMyCaptureTimer(CCaptureTimer):
+      
+          # TimerDef that will contain DateTime, Start, End, and Took.  DateTime
+          # is the time that we stored the data, thus when we are done with the
+          # timer.  All other fields are from the class CCaptureTimer.
+        TimerDef = namedtuple('Timer', ['DateTime', 'Start', 'End', 'Took'])
+        DictOfTimers = {}
+        
+        def __init__(self):
+          CCaptureTimer.__init__(self)
+          
+        def Save(self):
+          if self.Name not in self.DictOfTimers.keys():
+            self.DictOfTimers[self.Name] = []
+            
+          self.DictOfTimers[self.Name].append(self.TimerDef(datetime.now(), self.Start, self.End, self.Took)) 
+          
+        
+      CaptureTimer = CMyCaptureTimer()
+      
+        # Use a CCaptureTimer to manage the data
+      with CCodeTimer(Name = 'Timer1', CaptureTimer = CaptureTimer) as xx:
+        z = 0
+        for i in range(10000):
+          z += i
+      time.sleep(1)
+      with CCodeTimer(Name = 'Timer1', CaptureTimer = CaptureTimer) as xx:
+        z = 0
+        for i in range(10000):
+          z += i
+      time.sleep(1)
+      
+        # Use a CCaptureTimer to manage the data
+      CodeTimer = CCodeTimer(Name = 'Timer2', CaptureTimer = CaptureTimer)
+      z = 0
+      for i in range(10000):
+        z += i
+      CodeTimer.EndTimer()
+      time.sleep(1)
+      CodeTimer = CCodeTimer(Name = 'Timer2', CaptureTimer = CaptureTimer)
+      z = 0
+      for i in range(10000):
+        z += i
+      CodeTimer.EndTimer()
+      time.sleep(1)
+      
+        # Use a CCaptureTimer to manage the data
+      CodeTimer = CCodeTimer(Name = 'Timer3', CaptureTimer = CaptureTimer)
+      z = 0
+      for i in range(10000):
+        z += i
+      del CodeTimer
+      time.sleep(1)
+      CodeTimer = CCodeTimer(Name = 'Timer3', CaptureTimer = CaptureTimer)
+      z = 0
+      for i in range(10000):
+        z += i
+      del CodeTimer
+      time.sleep(1)
+      
+        # Lets dump out all our timers.
+      for TimerName, TimerList in CaptureTimer.DictOfTimers.items():
+        print('Timer: {0}'.format(TimerName))
+        for Timer in TimerList:
+          print('  DateTime: {0}'.format(Timer.DateTime.strftime("%d/%m/%Y %H:%M:%S")))
+          print('    Start: {0}ms'.format(Timer.Start))
+          print('    End:   {0}ms'.format(Timer.End))
+          print('    Took:  {0}ms'.format(Timer.Took))
+
+    OUTPUT FROM EXAMPLE:  
+
+      Timer: Timer1
+        DateTime: 20/02/2021 20:32:39
+          Start: 0.0424026ms
+          End:   0.0430942ms
+          Took:  0.6916000000000005ms
+        DateTime: 20/02/2021 20:32:40
+          Start: 1.0528344ms
+          End:   1.0537266ms
+          Took:  0.8922000000000097ms
+      Timer: Timer2
+        DateTime: 20/02/2021 20:32:41
+          Start: 2.0548847ms
+          End:   2.0556939ms
+          Took:  0.8091999999999544ms
+        DateTime: 20/02/2021 20:32:42
+          Start: 3.0578048ms
+          End:   3.0589537ms
+          Took:  1.1489000000000082ms
+      Timer: Timer3
+        DateTime: 20/02/2021 20:32:43
+          Start: 4.0749001ms
+          End:   4.0760673ms
+          Took:  1.167200000000257ms
+        DateTime: 20/02/2021 20:32:44
+          Start: 5.0903528ms
+          End:   5.0915074ms
+          Took:  1.1546000000004497ms
+             

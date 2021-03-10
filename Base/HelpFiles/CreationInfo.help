@@ -1,0 +1,87 @@
+This module has a single class that can be used to find out information
+about your instance of your class.  You just need to inherit this class
+and call its '__init__'.
+
+  CCreationInfo()
+  
+    Available Properties:
+    
+      ClassName
+        Name of the class that was created
+        
+      CreationFile
+        File the class was in
+        
+      CreationModule
+        Module the class was in.  If the module is in the same file as
+        the '__main__' then the name of the module is '__main__'.
+        
+      InstanceName
+        Name of the instance
+  
+  You can just create an instance of this class but this will not give you
+  information about your class.  You must inherit this class to get this
+  data about your class.
+  
+  EXAMPLE:
+  
+      from Libs.Base.CreationInfo import CCreationInfo
+    
+    # A simple class to show how to use CCreationInfo
+    class CMyClass(CCreationInfo):
+      def __init__(self):
+        CCreationInfo.__init__(self)
+    
+      # Prints information about this instance
+      def Me(self):
+        print("Class Name:    %s" % self.ClassName)
+        print("Create File:   %s" % self.CreationFile)
+        print("Creation Module: %s" % self.CreationModule)
+        print("Instance Name:   %s" % self.InstanceName)
+    
+      # Main program entry
+    if __name__ == '__main__':
+    
+      print("-" * 40)
+      
+        # Show data about MyInstance1
+      MyInstance = CMyClass()
+      MyInstance.Me()
+      print("-" * 40)
+    
+        # Show data about MyInstance1
+      MyInstance1 = CMyClass()
+      MyInstance1.Me()
+      print("-" * 40)
+    
+        # Shows you can create an instance of this class
+      Instance = CCreationInfo()
+      print("Class Name:    %s" % Instance.ClassName)
+      print("Create File:   %s" % Instance.CreationFile)
+      print("Creation Module: %s" % Instance.CreationModule)
+      print("Instance Name:   %s" % Instance.InstanceName)
+      print("-" * 40)
+      
+  EXAMPLE OUTPUT:
+  
+    ----------------------------------------
+    Class Name:    CMyClass
+    Create File:   D:\Programming\Projects\StateMachineGenerator\play.py
+    Creation Module: __main__
+    Instance Name:   MyInstance
+    ----------------------------------------
+    Class Name:    CMyClass
+    Create File:   D:\Programming\Projects\StateMachineGenerator\play.py
+    Creation Module: __main__
+    Instance Name:   MyInstance1
+    ----------------------------------------
+    Class Name:    CCreationInfo
+    Create File:   D:\Programming\Projects\StateMachineGenerator\play.py
+    Creation Module: __main__
+    Instance Name:   Instance
+    ----------------------------------------  
+    
+  As you can see the creation module is '__main__', this is because the
+  class was defined in a module with '__main__'.  Normally this would be
+  the module that your class is defined in.
+  

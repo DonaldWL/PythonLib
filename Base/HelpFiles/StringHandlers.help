@@ -1,0 +1,184 @@
+This module contains functions that help you with strings.  Some are
+just wrappers around normal python code.  It just helps to have a function
+with a name that matches what it does.
+
+  GetString
+    This will handles a quoted string.  This will remove the quotes and also
+    handles the backslash to allow a user to put a quote within the string.
+    To put a backslash in a string use two backslashes.
+    
+    _GetStringDef = GetString(Line, QuoteChars = "\"'")
+    
+      _GetStringDef = namedtuple('GetString', ['OutCome', 'CharConsumed', 'String'])
+        Is what is returned from SMS._Strings.GetString.  OutCome is the
+        outcome of the operation, True is ok False is not.  CharConsumed is
+        the number of characters consumed, and String, is the string that was
+        removed from the line
+        
+      Line = string
+        Is the line to process, assumes the first character is the
+        start of the string i.e., starts with quote.  It will
+        handle the backslash character.
+        
+      QuoteChars = String
+        Is a list of the characters that can be used for quote.  The default is
+        a single quote and the double quote (' or ").  Like python's string.
+        
+  EXAMPLE:      
+      
+    from Libs.Base.StringHandlers import GetString
+    
+      # Use the double quote
+    print("-" * 40)
+    Line = r'How is the "\"world\" is" doing today'
+    Offset = 11
+    GetStringResult = GetString(Line[11:])
+    print(GetStringResult)
+    
+      # Show how to access this via the field names
+    print(GetStringResult.OutCome)
+    print(GetStringResult.CharConsumed)
+    print(GetStringResult.String)
+    print(Line[GetStringResult.CharConsumed + Offset:])
+    
+      # Show how to access this via index
+    print()
+    print(GetStringResult[0])
+    print(GetStringResult[1])
+    print(GetStringResult[2])
+    print(Line[GetStringResult[1] + Offset:])
+    print("-" * 40)
+    
+      # Use the single quote
+    Line = r"How is the '\'world\' is' doing today"
+    Offset = 11
+    GetStringResult = GetString(Line[11:])
+    print(GetStringResult)
+    
+      # Show how to access this via the field names
+    print(GetStringResult.OutCome)
+    print(GetStringResult.CharConsumed)
+    print(GetStringResult.String)
+    print(Line[GetStringResult.CharConsumed + Offset:])
+    
+      # Show how to access this via index
+    print()
+    print(GetStringResult[0])
+    print(GetStringResult[1])
+    print(GetStringResult[2])
+    print(Line[GetStringResult[1] + Offset:])
+    print("-" * 40)
+    
+      # Show an error
+    Line = r'How is the "\"world\" is doing today'
+    Offset = 11
+    GetStringResult = GetString(Line[11:])
+    print(GetStringResult)
+    print("-" * 40)
+      
+  EXAMPLE OUTPUT:      
+      
+    ----------------------------------------
+    GetString(OutCome=True, CharConsumed=14, String='"world" is')
+    True
+    14
+    "world" is
+     doing today
+    
+    True
+    14
+    "world" is
+     doing today
+    ----------------------------------------
+    GetString(OutCome=True, CharConsumed=14, String="'world' is")
+    True
+    14
+    'world' is
+     doing today
+    
+    True
+    14
+    'world' is
+     doing today
+    ----------------------------------------
+    GetString(OutCome=False, CharConsumed=0, String='')
+    ----------------------------------------
+  
+  SkipWhiteSpace
+      
+  Skip spaces in a string and returned the number of
+  characters consumed.  This allows you to go thru
+  a string one char at a time and skip over the whitespace.
+
+  consumedCharCnt = SkipWhiteSpace(String, WhiteSpace)
+    consumedCharCnt
+      Is the number of spaces consumed
+    String
+      Is the string to process
+    WhiteSpace
+      Is a list of characters to use for while space.
+      The default is a space and tab.
+  
+  EXAMPLE:
+      
+    from Libs.Base.StringHandlers import SkipWhiteSpace
+      
+      # The Offset after the call will be the index in Line to the first 'F'
+    print("-" * 40)
+    Line = "      FFFF"
+    LineLen = len(Line)
+    WhiteSpace = ' \\t'
+    Offset = SkipWhiteSpace(Line, WhiteSpace)
+    print('Line:       "{0}"'.format(Line))
+    print('Offset:     {0}'.format(Offset))
+    print('OffsetLine: "{0}"'.format(Line[Offset:]))
+    
+      # Shows it works if no spaces to remove
+    print("-" * 40)
+    Line = "FF  FF"
+    LineLen = len(Line)
+    WhiteSpace = ' \\t'
+    Offset = SkipWhiteSpace(Line, WhiteSpace)
+    print('Line:       "{0}"'.format(Line))
+    print('Offset:     {0}'.format(Offset))
+    print('OffsetLine: "{0}"'.format(Line[Offset:]))
+    
+    print("-" * 40)
+    Line = "     "
+    LineLen = len(Line)
+    WhiteSpace = ' \\t'
+    Offset = SkipWhiteSpace(Line, WhiteSpace)
+    print('Line:       "{0}"'.format(Line))
+    print('Offset:     {0}'.format(Offset))
+    print('OffsetLine: "{0}"'.format(Line[Offset:]))
+    
+    print("-" * 40)
+    Line = ""
+    LineLen = len(Line)
+    WhiteSpace = ' \\t'
+    Offset = SkipWhiteSpace(Line, WhiteSpace)
+    print('Line:       "{0}"'.format(Line))
+    print('Offset:     {0}'.format(Offset))
+    print('OffsetLine: "{0}"'.format(Line[Offset:]))
+    print("-" * 40)
+
+  EXAMPLE OUTPUT:
+  
+    ----------------------------------------
+    Line:       "      FFFF"
+    Offset:     6
+    OffsetLine: "FFFF"
+    ----------------------------------------
+    Line:       "FF  FF"
+    Offset:     0
+    OffsetLine: "FF  FF"
+    ----------------------------------------
+    Line:       "     "
+    Offset:     5
+    OffsetLine: ""
+    ----------------------------------------
+    Line:       ""
+    Offset:     0
+    OffsetLine: ""
+    ----------------------------------------
+ 
