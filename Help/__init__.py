@@ -25,4 +25,4 @@ Update History:
 -----------------------------------------------------------------------------
 '''
 
-from .Help import (MYHELPFILEDIR, CHelp, HelpException)
+from .Help import (MYHELPFILEDIR, CHelp, HelpException, TagInfoDef, TagTypes)

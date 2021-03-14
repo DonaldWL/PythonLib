@@ -58,123 +58,77 @@ Exceptions:
     HelpException
       Any error that is not an AttributeError will have this exception.
 -----------------------------------------------------------------------------
-Example:
-
-    # You do not need to do the Libs.Help.Help.  The package handles this for you.
-  import Libs.Help
-
-  if __name__ == "__main__":
-    MyHelpDirs = ('HelpFiles')
-    MyTopicSeperatorLine = '\n'
-    MyPreTopc = 'usage'
-    MyPostTopic = '-v'
-    MyTopicIndent = 2
-    MyCopyRight = None
-    MyOutFile = None
-    MyHelpTopics = ('usagedetail', '--overwrite', '-s', 'version')
-
-    MyHelp = Libs.Help.CHelp(HelpDirs = MyHelpDirs,
-                             TopicSeperatorLine = MyTopicSeperatorLine,
-                             PreTopic = MyPreTopc,
-                             PostTopic = MyPostTopic,
-                             TopicIndent = MyTopicIndent,
-                             CopyRight = MyCopyRight,
-                             OutFile = MyOutFile)
-
-    MyHelp.Process(HelpTopics = MyHelpTopics)
-
-  The above program assumes you have a directory called 'HelpFiles' in your
-  current directory.  This directory contains all your helpfiles and
-  the '_TopicTran.help'.  It also assumes that you have topics setup for the
-  MyHelpTopics.
------------------------------------------------------------------------------
 Update History:
   Date: Feb 9, 2021
     Released
------------------------------------------------------------------------------
-ToDo:
+  Date: Mar 24, 2021
+    Added support of tags
+    General comment cleanup
 -----------------------------------------------------------------------------
 '''
 
 import os
 import sys
+from collections import namedtuple
+from enum import IntEnum
+
 
 MYHELPFILEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__)) + '/HelpFiles')
 
+  # This is the definition for tags that you wish to have replaced in your help file.
+  # You pass in to help 'Tags'.  This is a dictionary with the name of the tag.  Each
+  # line in the help file will be scanned for the tag and based on the tag type it
+  # will be replaced.  The tag will have the following added around it @@@<tag>@@@.
+  # The value of the tag can be a string, tuple, or list.  If a tuple or list then
+  # each item is placed in your file, tag type will determine how this is done.
+TagInfoDef = namedtuple('TagInfo', ['Type', 'Value'])
+
+  # These are the types for TagInfoDef.
+  #   SINGLEWORD
+  #     Replaces the tag with the value.  If tuple or list does a ' '.join
+  #   SENTENCE
+  #     Replaces the tag with the value and adds a new line.  If tuple or 
+  #     list does a ' '.join
+  #   PARAGRAPH
+  #     Replaces the tag with the value and adds new lines for each line.  If
+  #     just a string then you get one line, but if tuple or list each item
+  #     creates a new line.
+class TagTypes(IntEnum):
+  SINGLEWORD = 0
+  SENTENCE = 1
+  PARAGRAPH = 2
 
 class HelpException(Exception):
   pass
 
 
 class CHelp(object):
-  r'''
+  '''
   CHelp(HelpDirs = None, TopicSeperatorLine = None,
         PreTopic = None, PostTopic = None, TopicIndent = 0,
-        OutFile = None)
+        OutFile = None, Tags = None)
 
   HelpDirs
-    Is a string, tuple, or list of help directories to look at.
-    A string would only be one help directory.  If you pass
-    in None then the current directory as the directory 'HelpFiles'
-    added on to it and that is assume the location of all your
-    help files.
-
-    Has a setter and getter defined, thus you can change these
-    between runs without having to create a new instance.
-
+    See the setter.
   TopicSeperatorLine
-    This is a string or None.  If the string is not empty it will
-    be written out after every topic is processed, except the last
-    topic in the list.  Normally you set this to '\n'.  Thus a blank
-    line will be written between each topic.  Default is empty string.
-    None will also default to empty string.
-
-    Has a setter and getter defined, thus you can change these
-    between runs without having to create a new instance.
-
+    See the setter.
   PreTopic
-    If you wish a topic to be written out before all other topics then
-    pass this in with the pre topic.  Default is None.
-
-    Has a setter and getter defined, thus you can change these
-    between runs without having to create a new instance.
-
+    See the setter.
   PostTopic
-    This is just like PreTopic but is written out after all the other
-    topics have been processed.
-
-    Has a setter and getter defined, thus you can change these
-    between runs without having to create a new instance.
-
+    See the setter.
   TopicIndent
-    Is the how many spaces to indent your help text from the help
-    files.  The PreTopic and PostTOpic will not be indented.  This
-    allows you to create your help files starting at column one but
-    having your PreTopic start at column 1 and other topics indented.
-    Must be an integer 0 or greater.
-
+    See the setter.  Default is 0.
   CopyRight
-    Is a copyright that will be written out after all the topics
-    have been written.  If this will only happened if it is not
-    None.  Must be None or a string.  No EOL are managed for you.
-
+    See the setter.
   OutFile
-    Is the out file (from open) to write the help text to.  If None
-    then will default to 'sys.stdout'.  This could also be your
-    own class but must have a method called 'write' that takes
-    msg:
-
-      <class>.write(msg)
-
-    No EOL should be written out by write.  The message will contain
-    the EOL as needed.  i.e, like print("fun in the sun\n", end = "").
-
-    Has a setter and getter defined, thus you can change these
-    between runs without having to create a new instance.
+    See the setter.
+  Tags
+    See the setter.
   '''
   def __init__(self, HelpDirs = None, TopicSeperatorLine = None,  # pylint: disable = too-many-arguments
                PreTopic = None, PostTopic = None,
-               TopicIndent = 0, CopyRight = None, OutFile = None):
+               TopicIndent = 0, CopyRight = None, OutFile = None,
+               Tags = None):
     self._Topics = {}
     self._TopicList = None
 
@@ -198,6 +152,9 @@ class CHelp(object):
 
     self._TopicIndent = 0
     self.TopicIndent = TopicIndent
+    
+    self._Tags = None
+    self.Tags = Tags
 
     #--------------------------------------------------------------------------
   def Process(self, HelpTopics):
@@ -211,6 +168,7 @@ class CHelp(object):
         to the OutFile).  Must be a list or tuple of topics.
     '''
     Topics = None
+    NumTags = None if self._Tags == None else len(self._Tags)
 
     if not isinstance(HelpTopics, (list, tuple)):
       raise AttributeError('HelpTopics must be a non empty string or list or tuple ({0})'.format(str(type(HelpTopics))))
@@ -276,6 +234,7 @@ class CHelp(object):
               else:
                 self._OutFile.write(IndentSpaces + line)
             else:
+              if NumTags: line = self._ProcessTags(line)
               self._OutFile.write(IndentSpaces + line)
 
         Topics.pop(0)
@@ -384,13 +343,65 @@ class CHelp(object):
     return xFileName
 
     #--------------------------------------------------------------------------
+  def _ProcessTags(self, _Line):
+    LineLen = len(_Line)
+    Offset = 0
+    while Offset < LineLen:
+      StrtTagOffset = _Line.find('@@@', Offset)
+      if StrtTagOffset == -1: break
+      if StrtTagOffset + 6 >= LineLen: break
+      EndTagOffset = _Line.find('@@@', StrtTagOffset + 2)
+      if EndTagOffset == -1: break
+      if ' ' not in _Line[StrtTagOffset+3:EndTagOffset]:
+        TagName = _Line[StrtTagOffset+3:EndTagOffset]
+        EndTagOffset += 3
+        if TagName in self.Tags.keys():
+          TagInfo = self.Tags[TagName]
+          if TagInfo.Type == TagTypes.SINGLEWORD:
+            if isinstance(TagInfo.Value, str):
+              _Line = _Line[0:StrtTagOffset] + TagInfo.Value + _Line[EndTagOffset:]
+              Offset = StrtTagOffset + len(TagInfo.Value)
+            else:
+              _Line = _Line[0:StrtTagOffset] + ' '.join(TagInfo.Value) + _Line[EndTagOffset:]
+              Offset = StrtTagOffset + len(' '.join(TagInfo.Value))
+          elif TagInfo.Type == TagTypes.SENTENCE:
+            if isinstance(TagInfo.Value, str):
+              _Line = (' ' * StrtTagOffset) + TagInfo.Value + '\n'
+            else:
+              _Line = (' ' * StrtTagOffset) + ' '.join(TagInfo.Value) + '\n'
+            break
+          elif TagInfo.Type == TagTypes.PARAGRAPH:
+            if isinstance(TagInfo.Value, str):
+              _Line = (' ' * StrtTagOffset) + TagInfo.Value + '\n'
+            else:
+              _Line = ''
+              for xline in TagInfo.Value:
+                _Line += (' ' * StrtTagOffset) + xline + '\n'
+            break
+          LineLen = len(_Line)
+        else:
+          Offset = EndTagOffset
+      else:
+        Offset = EndTagOffset + 3
+      
+    return _Line
+  
+    #--------------------------------------------------------------------------
   @property
   def CopyRight(self):
+    '''
+    Gets the copy right.
+    '''
     return self._CopyRight
 
     #--------------------------------------------------------------------------
   @CopyRight.setter
   def CopyRight(self, CopyRight):
+    '''
+    Is a copyright that will be written out after all the topics
+    have been written.  If this will only happened if it is not
+    None.  Must be None or a string.  No EOL are managed for you.
+    '''
     if CopyRight is not None and not isinstance(CopyRight, str):
       raise AttributeError('CopyRight must be None or string ({0})'.format(str(type(CopyRight))))
     self._CopyRight = CopyRight
@@ -398,12 +409,24 @@ class CHelp(object):
     #--------------------------------------------------------------------------
   @property
   def HelpDirs(self):
+    '''
+    Gets the setting of the HelpDirs.
+    '''
     return self._HelpDirs
 
     #--------------------------------------------------------------------------
   @HelpDirs.setter
   def HelpDirs(self, HelpDirs):
+    '''
+    Is a string, tuple, or list of help directories to look at.
+    A string would only be one help directory.  If you pass
+    in None then the current directory as the directory 'HelpFiles'
+    added on to it and that is assume the location of all your
+    help files.
 
+    Has a setter and getter defined, thus you can change these
+    between runs without having to create a new instance.
+    '''
     self._HelpDirs = []
     xHelpDirs = []
     if HelpDirs is None:
@@ -427,11 +450,28 @@ class CHelp(object):
     #--------------------------------------------------------------------------
   @property
   def OutFile(self):
+    '''
+    Gets the out file.
+    '''
     return self._OutFile
 
     #--------------------------------------------------------------------------
   @OutFile.setter
   def OutFile(self, OutFile):
+    '''
+    Is the out file (from open) to write the help text to.  If None
+    then will default to 'sys.stdout'.  This could also be your
+    own class but must have a method called 'write' that takes
+    msg:
+
+      <class>.write(msg)
+
+    No EOL should be written out by write.  The message will contain
+    the EOL as needed.  i.e, like print("fun in the sun\n", end = "").
+
+    Has a setter and getter defined, thus you can change these
+    between runs without having to create a new instance.
+    '''
     if OutFile is None:
       OutFile = sys.stdout
     if not hasattr(OutFile, 'write'):
@@ -441,11 +481,21 @@ class CHelp(object):
     #--------------------------------------------------------------------------
   @property
   def PreTopic(self):
+    '''
+    Gets the pre topic
+    '''
     return self._PreTopic
 
     #--------------------------------------------------------------------------
   @PreTopic.setter
   def PreTopic(self, PreTopic):
+    '''
+    If you wish a topic to be written out before all other topics then
+    pass this in with the pre topic.  Default is None.
+  
+    Has a setter and getter defined, thus you can change these
+    between runs without having to create a new instance.
+    '''
     if PreTopic is None:
       self._PreTopic = None
     elif not isinstance(PreTopic, str):
@@ -456,11 +506,21 @@ class CHelp(object):
     #--------------------------------------------------------------------------
   @property
   def PostTopic(self):
+    '''
+    Get the Post topic.
+    '''
     return self._PostTopic
 
     #--------------------------------------------------------------------------
   @PostTopic.setter
   def PostTopic(self, PostTopic):
+    '''
+    This is just like PreTopic but is written out after all the other
+    topics have been processed.
+
+    Has a setter and getter defined, thus you can change these
+    between runs without having to create a new instance.
+    '''
     if PostTopic is None:
       self._PostTopic = None
     elif not isinstance(PostTopic, str):
@@ -476,11 +536,21 @@ class CHelp(object):
     #--------------------------------------------------------------------------
   @property
   def TopicIndent(self):
+    '''
+    Gets the Topic indent.
+    '''
     return self._TopicIndent
 
     #--------------------------------------------------------------------------
   @TopicIndent.setter
   def TopicIndent(self, TopicIndent):
+    '''
+    Is the how many spaces to indent your help text from the help
+    files.  The PreTopic and PostTOpic will not be indented.  This
+    allows you to create your help files starting at column one but
+    having your PreTopic start at column 1 and other topics indented.
+    Must be an integer 0 or greater.
+    '''
     if not isinstance(TopicIndent, int) and TopicIndent < 0:
       raise AttributeError('TopicIndent must be a positive integer {0}'.format(str(TopicIndent)))
     self._TopicIndent = TopicIndent
@@ -497,14 +567,64 @@ class CHelp(object):
     #--------------------------------------------------------------------------
   @property
   def TopicSeperatorLine(self):
+    '''
+    Gets the Topic Seperator
+    '''
     return self._TopicSeperatorLine
 
     #--------------------------------------------------------------------------
   @TopicSeperatorLine.setter
   def TopicSeperatorLine(self, TopicSeperatorLine = None):
+    '''
+    This is a string or None.  If the string is not empty it will
+    be written out after every topic is processed, except the last
+    topic in the list.  Normally you set this to '\n'.  Thus a blank
+    line will be written between each topic.  Default is empty string.
+    None will also default to empty string.
+
+    Has a setter and getter defined, thus you can change these
+    between runs without having to create a new instance.
+    '''
     if TopicSeperatorLine is None:
       self._TopicSeperatorLine = ''
     elif not isinstance(TopicSeperatorLine, str):
       raise AttributeError('TopicSeperatorLine must be None or string ({0})'.format(str(type(TopicSeperatorLine))))
     else:
       self._TopicSeperatorLine = TopicSeperatorLine
+
+    #--------------------------------------------------------------------------
+  @property
+  def Tags(self):
+    '''
+    Gets the Tags.
+    '''
+    return self._Tags
+  
+    #--------------------------------------------------------------------------
+  @Tags.setter
+  def Tags(self, Tags = None):
+    '''
+    Is a either None or a dictionary of tags that you wish to have 
+    the help system process.  See 'TagInfoDef' and 'TagTypes'.  All types 
+    are checked to make sure the dictionary is valid.  Any item in the
+    dictionary that is not will raise AttributeError.  If a key name
+    is spaces or empty will raise AttributeError.
+    '''
+    if Tags is None:
+      self._Tags = {}
+    elif not isinstance(Tags, dict):
+      raise AttributeError('Tags must be None or a dictionary ({0})'.format(str(type(Tags))))
+    else:
+      for TagName, TagInfo in Tags.items():
+        if not isinstance(TagName, str) or TagName == '' or TagName.find(' ') != -1:
+          raise AttributeError('TagName can not be empty or contain spaces and must be a string')
+        if str(type(TagInfo)) != "<class 'PythonLib.Help.Help.TagInfo'>":
+          raise AttributeError('{0}: Tag items must be of type TagInfoDef ({1})'.format(TagName, 
+                                                                                        str(type(TagInfo))))
+        if not isinstance(TagInfo.Type, TagTypes):
+          raise AttributeError('{0}: Type is not of TagTypes ({1})'.format(TagName, 
+                                                                           str(type(TagInfo.Type))))
+        if not isinstance(TagInfo.Value, (str, tuple, list)):
+          raise AttributeError('{0}: Value is not string, tuple, or list ({1})'.format(TagName, 
+                                                                                       str(type(TagInfo.Value))))
+      self._Tags = Tags

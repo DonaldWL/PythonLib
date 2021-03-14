@@ -141,6 +141,36 @@ Help System
     that have been added to the topic list.  It will always sort them for
     you and not assume upper and lower case.  That is why 'SMSSystem' is
     after 'smsfile'.
+    
+  TAGS
+  
+    You can define your own tags that will be replaced by the help system
+    if they are found within a help file.
+    
+    The tag in your help files will be of the format @@@<tag>@@@.  How it
+    is processed depends on the type of tag you defined.  When you create
+    an instance of the help class or use the setter for tags, you setup
+    your tags.  Most have no tags, but his can be very useful in some cases.
+    
+    In setting up your tags to pass into the class you must create a dictionary
+    of tags.  The key of the dictionary is the name of the tag.  You do not add
+    the '@@@' to the entry, just <tag>.  Each item in the dictionary must be of
+    TagInfoDef.  This is 'from collections import namedtuple'.  It has the following
+    definition:
+    
+      namedtuple('TagInfo', ['Type', 'Value'])
+        Type
+          is from the Enum TagTypes.  If type is not of this enum you will get an
+          AttributeError raised.
+        Value
+          is of string, tuple, or list.  If value is not of these you will get an
+          AttributeError raised.
+          
+    If your key must be a string and can not be empty or just spaces.  If so an
+    AttributeError will be raised.
+    
+    See the example in this file how to setup your tags.  Remember if you do not
+    with to use tags just pass in None.
 
   USING WITH PYTHON 'argparse'
   
@@ -204,3 +234,42 @@ Help System
     your root to the HelpDirs for the help system to find it.  If you do not wish
     the name to end with '.help' then use the 'f:<filename>' and call it whatever you
     wish, just remember it is just read in and echoed, thus a text file is required.
+    
+ EXAMPLE USING HELP SYSTEM
+
+  from PythonLib.Help import (TagInfoDef, TagTypes)
+
+  if __name__ == "__main__":
+    MyHelpDirs = ('HelpFiles')
+    MyTopicSeperatorLine = '\n'
+    MyPreTopc = 'usage'
+    MyPostTopic = '-v'
+    MyTopicIndent = 2
+    MyCopyRight = None
+    MyOutFile = None
+    
+      # Some silly tags.  If any of these tags are found in a help file
+      # they will be processed.
+    Tags = {'TAG1': TagInfoDef(TagTypes.SINGLEWORD, "Fun"),
+            'TAG2': TagInfoDef(TagTypes.SENTENCE, "Fun In The Sun"),
+            'TAG3': TagInfoDef(TagTypes.PARAGRAPH, ("Fun", "In", "The",  "Sun"))}
+    
+
+    MyHelp = Libs.Help.CHelp(HelpDirs = MyHelpDirs,
+                             TopicSeperatorLine = MyTopicSeperatorLine,
+                             PreTopic = MyPreTopc,
+                             PostTopic = MyPostTopic,
+                             TopicIndent = MyTopicIndent,
+                             CopyRight = MyCopyRight,
+                             OutFile = MyOutFile,
+                             Tags = Tags)
+
+      # Normally the help topics would be from a command line.
+    MyHelpTopics = ('usagedetail', '--overwrite', '-s', 'version')
+    MyHelp.Process(HelpTopics = MyHelpTopics)
+
+  The above program assumes you have a directory called 'HelpFiles' in your
+  current directory.  This directory contains all your helpfiles and
+  the '_TopicTran.help'.  It also assumes that you have topics setup for the
+  MyHelpTopics.
+ 
