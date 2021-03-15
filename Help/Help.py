@@ -61,16 +61,18 @@ Exceptions:
 Update History:
   Date: Feb 9, 2021
     Released
-  Date: Mar 24, 2021
+  Date: Mar 14, 2021
     Added support of tags
     General comment cleanup
+  Date: Mar 15, 2021
+    Added support for python module in help files that contains tags.
 -----------------------------------------------------------------------------
 '''
-
 import os
 import sys
 from collections import namedtuple
 from enum import IntEnum
+import importlib.util
 
 
 MYHELPFILEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__)) + '/HelpFiles')
@@ -125,10 +127,8 @@ class CHelp(object):
   Tags
     See the setter.
   '''
-  def __init__(self, HelpDirs = None, TopicSeperatorLine = None,  # pylint: disable = too-many-arguments
-               PreTopic = None, PostTopic = None,
-               TopicIndent = 0, CopyRight = None, OutFile = None,
-               Tags = None):
+  def __init__(self, HelpDirs = None, TopicSeperatorLine = None, PreTopic = None, PostTopic = None,
+               TopicIndent = 0, CopyRight = None, OutFile = None,Tags = None):
     self._Topics = {}
     self._TopicList = None
 
@@ -138,6 +138,10 @@ class CHelp(object):
     self._CopyRight = None
     self.CopyRight = CopyRight
 
+      # Tags must be set before HelpDirs.
+    self._Tags = []
+    self.Tags = Tags
+    
     self._HelpDirs = None
     self.HelpDirs = HelpDirs
 
@@ -152,9 +156,6 @@ class CHelp(object):
 
     self._TopicIndent = 0
     self.TopicIndent = TopicIndent
-    
-    self._Tags = None
-    self.Tags = Tags
 
     #--------------------------------------------------------------------------
   def Process(self, HelpTopics):
@@ -168,10 +169,10 @@ class CHelp(object):
         to the OutFile).  Must be a list or tuple of topics.
     '''
     Topics = None
-    NumTags = None if self._Tags == None else len(self._Tags)
+    NumTags = None if self._Tags is None else len(self._Tags)
 
     if not isinstance(HelpTopics, (list, tuple)):
-      raise AttributeError('HelpTopics must be a non empty string or list or tuple ({0})'.format(str(type(HelpTopics))))
+      raise AttributeError(f'HelpTopics must be a non empty string or list or tuple ({str(type(HelpTopics))})')
 
     Topics = list(HelpTopics).copy()
 
@@ -186,7 +187,7 @@ class CHelp(object):
 
     while Topics:
       if not Topics[0] in self._Topics.keys():
-        raise HelpException('Unable to find topic ({0})'.format(Topics[0]))
+        raise HelpException(f'Unable to find topic ({Topics[0]})')
 
       try:
         if self._PostTopic is not None and len(Topics) == 1:
@@ -238,7 +239,7 @@ class CHelp(object):
               self._OutFile.write(IndentSpaces + line)
 
         Topics.pop(0)
-      except Exception as err:
+      except (OSError, IOError) as err:
         raise HelpException('Unable to open Topic file {0} for Topic {1} ({2})'.format(self._Topics[Topics[0]],
                                                                                        Topics[0],
                                                                                        str(err))) from FileNotFoundError
@@ -249,143 +250,6 @@ class CHelp(object):
     if self._CopyRight is not None:
       self._OutFile.write(self._CopyRight)
 
-    #--------------------------------------------------------------------------
-  def _ProcessTopicTran(self):
-    self._TopicList = []
-
-    TopicTranFileName = self._ExpandFileName('_TopicTran.help')
-    if TopicTranFileName is None:
-      raise HelpException('Unable to find _TopicTran.help file')
-
-    try:
-      with open(TopicTranFileName, 'r') as TopicTranFile:
-        LineCnt = 0
-        for line in TopicTranFile:
-          LineCnt += 1
-          line = line.strip()
-          if line:
-            TranData = line.split()
-
-              # Process the last entry, to get the final topic file.
-            FinalTopicFile = None
-            FinalTopic = None
-            if TranData[-1].startswith('f:'):
-              if len(TranData) == 1:
-                raise HelpException('Bad format of line at {0} in TopicTran help file {1}'.format(LineCnt,
-                                                                                                  TopicTranFileName))
-
-              FinalTopicFile = self._ExpandFileName(TranData[-1][2:])
-              if FinalTopicFile is None:
-                raise HelpException('Unable to find User Topic file {0}'.format(TranData[-1]))
-            else:
-              FinalTopic = TranData[-1]
-              if FinalTopic.startswith('t:'):  # TODO: Handle empty topic
-                FinalTopic = FinalTopic[2:]
-                self._TopicList.append(FinalTopic)
-              FinalTopic = FinalTopic.strip()
-              if not FinalTopic:
-                raise HelpException('Bad format (missing topic) of line at {0} in TopicTran help file {1}'.format(LineCnt,
-                                                                                                                  TopicTranFileName))
-              FinalTopicFile = self._ExpandFileName(FinalTopic + '.help')
-              if FinalTopicFile is None:
-                raise HelpException('Unable to find Topic file {0} for Topic {1}'.format(FinalTopic + '.help',
-                                                                                          TranData[-1]))
-              if not FinalTopic in self._Topics.keys():
-                self._Topics[FinalTopic] = FinalTopicFile
-
-            TranData.pop(-1)
-
-              # Process the rest of the trans data.
-            while TranData:
-              if TranData[-1] != '=>' and TranData[-1] != '->':
-                raise HelpException('Bad format of line at {0} in TopicTran help file {1}'.format(LineCnt,
-                                                                                                  TopicTranFileName))
-              TranData.pop(-1)
-              if not TranData:
-                raise HelpException('Bad format of line at {0} in TopicTran help file {1}'.format(LineCnt,
-                                                                                                  TopicTranFileName))
-              FinalTopic = TranData[-1]
-              if FinalTopic.startswith('t:'):
-                FinalTopic = FinalTopic[2:]
-                self._TopicList.append(FinalTopic)
-              FinalTopic = FinalTopic.strip()
-              if not FinalTopic:
-                raise HelpException('Bad format (missing topic) of line at {0} in TopicTran help file {1}'.format(LineCnt,
-                                                                                                                  TopicTranFileName))
-              self._Topics[FinalTopic] = FinalTopicFile
-              TranData.pop(-1)
-    except HelpException as err:
-      raise err from None
-    except Exception as err:
-      raise HelpException('Unable to open TopicTran help file {0} ({1})'.format(TopicTranFileName,
-                                                                                str(err))) from FileNotFoundError
-
-      # Lets sort the topiclist
-    def SortFunc(e):
-      return e.lower()
-
-    self._TopicList.sort(reverse = False, key = SortFunc)
-
-    #--------------------------------------------------------------------------
-  def _ExpandFileName(self, FileName):
-    '''
-    Expand the passed in FileName.  If it returns None then the filedoes not 
-    exist.
-    '''
-    xFileName = None
-
-    for Dir in self._HelpDirs:
-      xFileName = os.path.join(Dir, FileName)
-      if os.path.exists(xFileName) and os.path.isfile(xFileName):
-        break
-      xFileName = None
-
-    return xFileName
-
-    #--------------------------------------------------------------------------
-  def _ProcessTags(self, _Line):
-    LineLen = len(_Line)
-    Offset = 0
-    while Offset < LineLen:
-      StrtTagOffset = _Line.find('@@@', Offset)
-      if StrtTagOffset == -1: break
-      if StrtTagOffset + 6 >= LineLen: break
-      EndTagOffset = _Line.find('@@@', StrtTagOffset + 2)
-      if EndTagOffset == -1: break
-      if ' ' not in _Line[StrtTagOffset+3:EndTagOffset]:
-        TagName = _Line[StrtTagOffset+3:EndTagOffset]
-        EndTagOffset += 3
-        if TagName in self.Tags.keys():
-          TagInfo = self.Tags[TagName]
-          if TagInfo.Type == TagTypes.SINGLEWORD:
-            if isinstance(TagInfo.Value, str):
-              _Line = _Line[0:StrtTagOffset] + TagInfo.Value + _Line[EndTagOffset:]
-              Offset = StrtTagOffset + len(TagInfo.Value)
-            else:
-              _Line = _Line[0:StrtTagOffset] + ' '.join(TagInfo.Value) + _Line[EndTagOffset:]
-              Offset = StrtTagOffset + len(' '.join(TagInfo.Value))
-          elif TagInfo.Type == TagTypes.SENTENCE:
-            if isinstance(TagInfo.Value, str):
-              _Line = (' ' * StrtTagOffset) + TagInfo.Value + '\n'
-            else:
-              _Line = (' ' * StrtTagOffset) + ' '.join(TagInfo.Value) + '\n'
-            break
-          elif TagInfo.Type == TagTypes.PARAGRAPH:
-            if isinstance(TagInfo.Value, str):
-              _Line = (' ' * StrtTagOffset) + TagInfo.Value + '\n'
-            else:
-              _Line = ''
-              for xline in TagInfo.Value:
-                _Line += (' ' * StrtTagOffset) + xline + '\n'
-            break
-          LineLen = len(_Line)
-        else:
-          Offset = EndTagOffset
-      else:
-        Offset = EndTagOffset + 3
-      
-    return _Line
-  
     #--------------------------------------------------------------------------
   @property
   def CopyRight(self):
@@ -436,17 +300,20 @@ class CHelp(object):
     elif isinstance(HelpDirs, (tuple, list)):
       xHelpDirs = list(HelpDirs).copy()
     else:
-      raise AttributeError('HelpDirs must be a list, tuple, or string ({0})'.format(str(type(HelpDirs))))
-
+      raise AttributeError(f'HelpDirs must be a list, tuple, or string ({str(type(HelpDirs))})')
+    
+    self._Tags = [self._Tags[0]]
     for Dir in xHelpDirs:
       self._HelpDirs.append(os.path.abspath(os.path.expanduser(os.path.expandvars(Dir))))
       if not os.path.exists(self._HelpDirs[-1]):
-        raise AttributeError('HelpDir {0} does not exist'.format(self._HelpDirs[-1]))
+        raise AttributeError(f'HelpDir {self._HelpDirs[-1]} does not exist')
       if not os.path.isdir(self._HelpDirs[-1]):
-        raise AttributeError("HelpDir {0} is not a directory".format(self._HelpDirs[-1]))
+        raise AttributeError(f"HelpDir {self._HelpDirs[-1]} is not a directory")
+      
+      self._LoadTagFile(Dir) # Load tag file if found.
 
     self._ProcessTopicTran()
-
+    
     #--------------------------------------------------------------------------
   @property
   def OutFile(self):
@@ -530,6 +397,43 @@ class CHelp(object):
 
     #--------------------------------------------------------------------------
   @property
+  def Tags(self):
+    '''
+    Gets the Tags, this is not just the tags you passed in.  It is a list of
+    all the tag dictionaries that have been created.  The fist item in the
+    list is the tags from you passing in your Tags.  If you passed in None
+    it will be and empty dictionary.  If more than one item in the list then
+    tags also got loaded from Tags.py from help dirs.  The order of these
+    tags matches the HelpDirs order.
+    
+    Every time you set the HelpDirs the list is reset.  It will always 
+    keep your tags as the first item.  If you change your tags then the
+    first item will be updated.
+    '''
+    return self._Tags
+  
+    #--------------------------------------------------------------------------
+  @Tags.setter
+  def Tags(self, Tags = None):
+    '''
+    Is a either None or a dictionary of tags that you wish to have 
+    the help system process.  See 'TagInfoDef' and 'TagTypes'.  All types 
+    are checked to make sure the dictionary is valid.  Any item in the
+    dictionary that is not will raise AttributeError.  If a key name
+    is spaces or empty will raise AttributeError.
+    '''
+    if Tags is None:
+      Tags = {}
+    else:
+      self._ValidateTags(Tags)
+
+    if self._Tags:
+      self._Tags[0] = Tags
+    else:
+      self._Tags.append(Tags)
+    
+    #--------------------------------------------------------------------------
+  @property
   def Topics(self):
     return self._Topics
 
@@ -593,38 +497,181 @@ class CHelp(object):
       self._TopicSeperatorLine = TopicSeperatorLine
 
     #--------------------------------------------------------------------------
-  @property
-  def Tags(self):
+  def _ExpandFileName(self, FileName):
     '''
-    Gets the Tags.
+    Expand the passed in FileName.  If it returns None then the filedoes not 
+    exist.
     '''
-    return self._Tags
+    xFileName = None
+
+    for Dir in self._HelpDirs:
+      xFileName = os.path.join(Dir, FileName)
+      if os.path.exists(xFileName) and os.path.isfile(xFileName):
+        break
+      xFileName = None
+
+    return xFileName
+
+    #--------------------------------------------------------------------------
+  def _LoadTagFile(self, HelpDIr):
+    TagsFile = os.path.abspath(os.path.join(HelpDIr, 'Tags.py'))
+    if os.path.exists(TagsFile) and os.path.isfile(TagsFile):
+      spec = importlib.util.spec_from_file_location('HelpTags', TagsFile)
+      HTags = importlib.util.module_from_spec(spec)
+      try:
+        spec.loader.exec_module(HTags)
+      except (SyntaxError, NameError) as err:
+        self._OutFile.write(f"ERROR: {str(err)} in module {TagsFile}")
+        return
+        
+      self._ValidateTags(HTags.Tags)
+      self._Tags.append(HTags.Tags)
+
+    #--------------------------------------------------------------------------
+  def _ProcessTags(self, _Line):
+    '''
+    Process the tags for a line.
+    '''
+    for Tags in self._Tags:
+      LineLen = len(_Line)
+      Offset = 0
+      while Offset < LineLen:
+        StrtTagOffset = _Line.find('@@@', Offset)
+        if StrtTagOffset == -1: break
+        if StrtTagOffset + 6 >= LineLen: break
+        EndTagOffset = _Line.find('@@@', StrtTagOffset + 2)
+        if EndTagOffset == -1: break
+        if ' ' not in _Line[StrtTagOffset+3:EndTagOffset]:
+          TagName = _Line[StrtTagOffset+3:EndTagOffset]
+          EndTagOffset += 3
+          if TagName in Tags.keys():
+            TagInfo = Tags[TagName]
+            if TagInfo.Type == TagTypes.SINGLEWORD:
+              if isinstance(TagInfo.Value, str):
+                _Line = _Line[0:StrtTagOffset] + TagInfo.Value + _Line[EndTagOffset:]
+                Offset = StrtTagOffset + len(TagInfo.Value)
+              else:
+                _Line = _Line[0:StrtTagOffset] + ' '.join(TagInfo.Value) + _Line[EndTagOffset:]
+                Offset = StrtTagOffset + len(' '.join(TagInfo.Value))
+            elif TagInfo.Type == TagTypes.SENTENCE:
+              if isinstance(TagInfo.Value, str):
+                _Line = (' ' * StrtTagOffset) + TagInfo.Value + '\n'
+              else:
+                _Line = (' ' * StrtTagOffset) + ' '.join(TagInfo.Value) + '\n'
+              return _Line
+            elif TagInfo.Type == TagTypes.PARAGRAPH:
+              if isinstance(TagInfo.Value, str):
+                _Line = (' ' * StrtTagOffset) + TagInfo.Value + '\n'
+              else:
+                _Line = ''
+                for xline in TagInfo.Value:
+                  _Line += (' ' * StrtTagOffset) + xline + '\n'
+              return _Line
+            LineLen = len(_Line)
+          else:
+            Offset = EndTagOffset
+        else:
+          Offset = EndTagOffset + 3
+      
+    return _Line
   
     #--------------------------------------------------------------------------
-  @Tags.setter
-  def Tags(self, Tags = None):
+  def _ProcessTopicTran(self):
     '''
-    Is a either None or a dictionary of tags that you wish to have 
-    the help system process.  See 'TagInfoDef' and 'TagTypes'.  All types 
-    are checked to make sure the dictionary is valid.  Any item in the
-    dictionary that is not will raise AttributeError.  If a key name
-    is spaces or empty will raise AttributeError.
+    Process the TopicTran help file.
     '''
-    if Tags is None:
-      self._Tags = {}
-    elif not isinstance(Tags, dict):
+    self._TopicList = []
+
+    TopicTranFileName = self._ExpandFileName('_TopicTran.help')
+    if TopicTranFileName is None:
+      raise HelpException('Unable to find _TopicTran.help file')
+
+    try:
+      with open(TopicTranFileName, 'r') as TopicTranFile:
+        LineCnt = 0
+        for line in TopicTranFile:
+          LineCnt += 1
+          line = line.strip()
+          if line:
+            TranData = line.split()
+
+              # Process the last entry, to get the final topic file.
+            FinalTopicFile = None
+            FinalTopic = None
+            if TranData[-1].startswith('f:'):
+              if len(TranData) == 1:
+                raise HelpException('Bad format of line at {0} in TopicTran help file {1}'.format(LineCnt,
+                                                                                                  TopicTranFileName))
+
+              FinalTopicFile = self._ExpandFileName(TranData[-1][2:])
+              if FinalTopicFile is None:
+                raise HelpException(f'Unable to find User Topic file {TranData[-1]}')
+            else:
+              FinalTopic = TranData[-1]
+              if FinalTopic.startswith('t:'):  # TODO: Handle empty topic
+                FinalTopic = FinalTopic[2:]
+                self._TopicList.append(FinalTopic)
+              FinalTopic = FinalTopic.strip()
+              if not FinalTopic:
+                raise HelpException('Bad format (missing topic) of line at {0} in TopicTran help file {1}'.format(LineCnt,
+                                                                                                                  TopicTranFileName))
+              FinalTopicFile = self._ExpandFileName(FinalTopic + '.help')
+              if FinalTopicFile is None:
+                raise HelpException('Unable to find Topic file {0} for Topic {1}'.format(FinalTopic + '.help',
+                                                                                          TranData[-1]))
+              if not FinalTopic in self._Topics.keys():
+                self._Topics[FinalTopic] = FinalTopicFile
+
+            TranData.pop(-1)
+
+              # Process the rest of the trans data.
+            while TranData:
+              if TranData[-1] != '=>' and TranData[-1] != '->':
+                raise HelpException('Bad format of line at {0} in TopicTran help file {1}'.format(LineCnt,
+                                                                                                  TopicTranFileName))
+              TranData.pop(-1)
+              if not TranData:
+                raise HelpException('Bad format of line at {0} in TopicTran help file {1}'.format(LineCnt,
+                                                                                                  TopicTranFileName))
+              FinalTopic = TranData[-1]
+              if FinalTopic.startswith('t:'):
+                FinalTopic = FinalTopic[2:]
+                self._TopicList.append(FinalTopic)
+              FinalTopic = FinalTopic.strip()
+              if not FinalTopic:
+                raise HelpException('Bad format (missing topic) of line at {0} in TopicTran help file {1}'.format(LineCnt,
+                                                                                                                  TopicTranFileName))
+              self._Topics[FinalTopic] = FinalTopicFile
+              TranData.pop(-1)
+    except HelpException as err:
+      raise err from None
+    except Exception as err:
+      raise HelpException('Unable to open TopicTran help file {0} ({1})'.format(TopicTranFileName,
+                                                                                str(err))) from FileNotFoundError
+
+      # Lets sort the topiclist
+    def SortFunc(e):
+      return e.lower()
+
+    self._TopicList.sort(reverse = False, key = SortFunc)
+
+    #--------------------------------------------------------------------------
+  def _ValidateTags(self, Tags):
+    '''
+    Validate the tags dictionary.  If invalid will raise an AttributeError.
+    '''
+    if not isinstance(Tags, dict):
       raise AttributeError('Tags must be None or a dictionary ({0})'.format(str(type(Tags))))
-    else:
-      for TagName, TagInfo in Tags.items():
-        if not isinstance(TagName, str) or TagName == '' or TagName.find(' ') != -1:
-          raise AttributeError('TagName can not be empty or contain spaces and must be a string')
-        if str(type(TagInfo)) != "<class 'PythonLib.Help.Help.TagInfo'>":
-          raise AttributeError('{0}: Tag items must be of type TagInfoDef ({1})'.format(TagName, 
-                                                                                        str(type(TagInfo))))
-        if not isinstance(TagInfo.Type, TagTypes):
-          raise AttributeError('{0}: Type is not of TagTypes ({1})'.format(TagName, 
-                                                                           str(type(TagInfo.Type))))
-        if not isinstance(TagInfo.Value, (str, tuple, list)):
-          raise AttributeError('{0}: Value is not string, tuple, or list ({1})'.format(TagName, 
-                                                                                       str(type(TagInfo.Value))))
-      self._Tags = Tags
+
+    for TagName, TagInfo in Tags.items():
+      if not isinstance(TagName, str) or TagName == '' or TagName.find(' ') != -1:
+        raise AttributeError('TagName can not be empty or contain spaces and must be a string')
+      if str(type(TagInfo)) != "<class 'PythonLib.Help.Help.TagInfo'>":
+        raise AttributeError('{0}: Tag items must be of type TagInfoDef ({1})'.format(TagName, 
+                                                                                      str(type(TagInfo))))
+      if not isinstance(TagInfo.Type, TagTypes):
+        raise AttributeError('{0}: Type is not of TagTypes ({1})'.format(TagName, 
+                                                                         str(type(TagInfo.Type))))
+      if not isinstance(TagInfo.Value, (str, tuple, list)):
+        raise AttributeError('{0}: Value is not string, tuple, or list ({1})'.format(TagName, 
+                                                                                     str(type(TagInfo.Type))))

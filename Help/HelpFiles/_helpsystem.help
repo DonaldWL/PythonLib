@@ -171,7 +171,25 @@ Help System
     
     See the example in this file how to setup your tags.  Remember if you do not
     with to use tags just pass in None.
-
+    
+    You can also place a file in your help directory that is 'Tags.py'.  The help
+    system will load this file for the tags.  It must have a dictionary called 'Tags'. 
+    that matches the normal tags dictionary.  Each help directory can have a 'Tags.py'
+    file.  All of them will processed in the order of the helpdir's.  You can
+    also have your passed in tags.  Passed in tags will always be first.  The
+    reason for the 'Tags.py' file is to allow all your help files to be managed
+    outside of your program.  The 'Tags.py' is a python file and must be 
+    coded up so.  Below is an example of such a file.
+    
+      from PythonLib.Help import (TagInfoDef, TagTypes)
+      
+      Tags = {'TAG1': TagInfoDef(TagTypes.SINGLEWORD, "Fun fun fun"),
+              'TAG2': TagInfoDef(TagTypes.SENTENCE, "Fun In The Sun"),
+              'TAG3': TagInfoDef(TagTypes.PARAGRAPH, ("Fun are the days", 
+                                                      "In the life", 
+                                                      "The day is short", 
+                                                      "Sun is bright"))}
+    
   USING WITH PYTHON 'argparse'
   
     One issue you have with pythons argparser is that it already handles
