@@ -172,7 +172,7 @@ class CHelp(object):
     NumTags = None if self._Tags is None else len(self._Tags)
 
     if not isinstance(HelpTopics, (list, tuple)):
-      raise AttributeError(f'HelpTopics must be a non empty string or list or tuple ({str(type(HelpTopics))})')
+      raise AttributeError('HelpTopics must be a non empty string or list or tuple ({0})'.format(str(type(HelpTopics))))
 
     Topics = list(HelpTopics).copy()
 
@@ -187,7 +187,7 @@ class CHelp(object):
 
     while Topics:
       if not Topics[0] in self._Topics.keys():
-        raise HelpException(f'Unable to find topic ({Topics[0]})')
+        raise HelpException('Unable to find topic ({0})'.format(Topics[0]))
 
       try:
         if self._PostTopic is not None and len(Topics) == 1:
@@ -300,15 +300,15 @@ class CHelp(object):
     elif isinstance(HelpDirs, (tuple, list)):
       xHelpDirs = list(HelpDirs).copy()
     else:
-      raise AttributeError(f'HelpDirs must be a list, tuple, or string ({str(type(HelpDirs))})')
+      raise AttributeError('HelpDirs must be a list, tuple, or string ({0})'.format(str(type(HelpDirs))))
     
     self._Tags = [self._Tags[0]]
     for Dir in xHelpDirs:
       self._HelpDirs.append(os.path.abspath(os.path.expanduser(os.path.expandvars(Dir))))
       if not os.path.exists(self._HelpDirs[-1]):
-        raise AttributeError(f'HelpDir {self._HelpDirs[-1]} does not exist')
+        raise AttributeError('HelpDir {0} does not exist'.format(self._HelpDirs[-1]))
       if not os.path.isdir(self._HelpDirs[-1]):
-        raise AttributeError(f"HelpDir {self._HelpDirs[-1]} is not a directory")
+        raise AttributeError("HelpDir {0} is not a directory".format(self._HelpDirs[-1]))
       
       self._LoadTagFile(Dir) # Load tag file if found.
 
@@ -521,7 +521,7 @@ class CHelp(object):
       try:
         spec.loader.exec_module(HTags)
       except (SyntaxError, NameError) as err:
-        self._OutFile.write(f"ERROR: {str(err)} in module {TagsFile}")
+        self._OutFile.write("ERROR: {0} in module {1}".format(str(err), TagsFile))
         return
         
       self._ValidateTags(HTags.Tags)
@@ -605,7 +605,7 @@ class CHelp(object):
 
               FinalTopicFile = self._ExpandFileName(TranData[-1][2:])
               if FinalTopicFile is None:
-                raise HelpException(f'Unable to find User Topic file {TranData[-1]}')
+                raise HelpException('Unable to find User Topic file {0}'.format(TranData[-1]))
             else:
               FinalTopic = TranData[-1]
               if FinalTopic.startswith('t:'):  # TODO: Handle empty topic
