@@ -1,0 +1,128 @@
+This module implements a doubly linked list.  It can do everything for 
+you or you can manage the list your self.  You have a CNode class that
+is the definition for each node within the doubly linked list.
+
+  Node = CNode(UserData)
+    Node
+      Is instance of the new node.
+    UserData
+      Is the data you wish to store in the node.
+      
+The new node has three variables that you can access.  You should not
+access the Prev and Next variables, these are managed by CDoubleLinkedList.
+The only variable you should access is the UserData.  You can change this
+anytime and it will not affect the doubly linked list.
+
+You have two types of doubly linked lists: FIFO and LIFO.  FIFO is First in
+First Out.  This means when you push items on the list the first item you
+pushed will be the first item that comes off and so one.  LIFO is Last in
+First Out.  The last item you push in will be the first item that you get.
+
+On a FIFO, if you push in user data 0, 1, 2, 3, 4.  And then pop them off
+you will get them back in that order (0, 1, 2, 3, 4).  On a LIFO, if you
+pushed in the same data you will get them back in (4, 3, 2, 1, 0).
+
+An enum class has been created that is used to set the type of doubly linked
+list that you create.
+
+  DLinkType
+    FIFO
+    LIFO
+    
+The main class for the doubly linked list is CDoubleLinkedList.  It does have 
+a lot of code, but this is to allow it to be used an many ways.  Normally you
+only use two of the methods (Push and Pop).  The close also supports python 
+style iteration, so you can read your list within a for loop.
+
+How this class works is it orders the items (nodes) based on the type of
+doubly linked list you have.  The top of the list depends on the type.  If
+FIFO then the first item is always on top, if LIFO then the last item is 
+always on top.
+
+  DList = CDoubleLinkedList(Type)
+    DList
+      instance of the class
+    Type
+      Type of doubly linked list, see DLinkType enum
+      
+      
+The following methods can be used to push items on the doubly linked list.  See
+the source on how to use these.
+  
+  Push
+    Pushes the passed in user data to the doubly linked list.  How it gets 
+    placed depends on the type of doubly linked list.
+  PushBeforeNode
+    If you are going to have a node that you already created or stored and wish
+    to place this node before another node then use this method.
+  PushBeforeUserData
+    This is like PushBeforeNode, but insted of you passing in your own node you
+    pass in your User data and it creates a new node for you and then places it
+    after the before node.
+  PushBottom
+    Pushes to the bottom
+  PushBottomNode
+    Pushes a node you already have to the bottom
+  PushNode
+    Is like Push, but pushes your node.
+  PushTop
+    Pushes to the top of the doubly linked list.
+  PushTopNode
+    Is like PushTop but pushes your node.
+
+The following methods can be used to pop items from the doubly linked list.  See
+the source on how to use these.
+
+  Pop
+    Pops the first node in the lsit
+  PopBottom
+    Pops the node at the bottom of the list
+  PopNode
+    Pops the passed in node from the list
+  PopTop
+    Is just like Pop.
+    
+EXAMPE:
+
+  from Libs.Base.DoubleLinkedList import (DLinkType, CDoubleLinkedList, CNode)
+
+  if __name__ == '__main__':
+    DList = CDoubleLinkedList(DLinkType.FIFO)
+    DelNode = None
+    BeforeNode = None
+
+      # Create 12 items
+    for i in range(1, 13):
+      DList.Push(i)
+
+      # Print them out
+    print('-' * 20)
+    for Node in DList:
+      print(Node.UserData)
+      if Node.UserData == 5:
+        DelNode = Node
+      if Node.UserData == 8:
+        BeforeNode = Node
+
+        # Pop one from the top and one from the
+        # bottom, print them out.
+    print('-' * 20)
+    print(DList.Pop().UserData)
+    print(DList.PopBottom().UserData)
+    print('')
+    for Node in DList:
+      print(Node.UserData)
+
+      # Pop our saved DelNode, it is user data
+      # 5 and print them out
+    print('-' * 20)
+    DList.PopNode(DelNode)
+    for Node in DList:
+      print(Node.UserData)
+
+      # Put back the deleted node before the
+      # 8 and print it out.
+    print('-' * 20)
+    DList.PushBeforeNode(BeforeNode, DelNode)
+    for Node in DList:
+      print(Node.UserData)
